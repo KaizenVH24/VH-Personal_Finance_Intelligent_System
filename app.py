@@ -10,6 +10,7 @@ from utils.aggregator import add_time_features, monthly_summary
 from utils.anomaly_detector import detect_large_transactions, detect_anomalies
 from utils.categorizer import apply_categorization, assign_transaction_type
 from utils.health_score import calculate_financial_health_score
+from utils.forecasting import forecast_next_months
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -78,6 +79,95 @@ if uploaded_file:
             st.error("High Financial Risk – Immediate Attention Recommended")
 
         st.divider()
+
+        st.divider()
+        st.subheader("💰 Budget Planner")
+
+        monthly_budget = st.number_input(
+            "Enter Your Monthly Budget (₹)",
+            min_value=0.0,
+            value=30000.0,
+            step=1000.0
+        )
+
+        total_expense = df[df["transaction_type"] == "Expense"]["amount"].sum()
+        months_count = df[["year", "month_number"]].drop_duplicates().shape[0]
+
+        if months_count > 0:
+            avg_monthly_expense = total_expense / months_count
+        else:
+            avg_monthly_expense = 0
+
+        st.write(f"Average Monthly Expense: ₹ {avg_monthly_expense:,.2f}")
+
+        difference = monthly_budget - avg_monthly_expense
+
+        if difference > 0:
+            st.success(f"You are under budget by ₹ {difference:,.2f}")
+        else:
+            st.error(f"You are exceeding budget by ₹ {abs(difference):,.2f}")
+
+
+        st.divider()
+        st.subheader("🔮 Expense Forecasting")
+
+        categories = df[df["transaction_type"] == "Expense"]["category"].unique()
+        selected_category = st.selectbox(
+            "Select Category (or choose Total Expense)",
+            ["Total"] + list(categories)
+        )
+
+        if selected_category == "Total":
+            forecast_result = forecast_next_months(df)
+        else:
+            forecast_result = forecast_next_months(df, category=selected_category)
+
+        if forecast_result is None:
+            st.info("Not enough data for forecasting.")
+        else:
+            historical_data, forecast_df = forecast_result
+
+            import plotly.graph_objects as go
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(
+                x=historical_data["time_index"],
+                y=historical_data["amount"],
+                mode='lines+markers',
+                name="Historical Expense"
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=forecast_df["future_index"],
+                y=forecast_df["predicted_expense"],
+                mode='lines+markers',
+                name="Predicted Expense"
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=forecast_df["future_index"],
+                y=forecast_df["upper_bound"],
+                mode='lines',
+                name="Upper Confidence",
+                line=dict(dash='dash')
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=forecast_df["future_index"],
+                y=forecast_df["lower_bound"],
+                mode='lines',
+                name="Lower Confidence",
+                line=dict(dash='dash')
+            ))
+
+            fig.update_layout(
+                xaxis_title="Time Index",
+                yaxis_title="Expense Amount"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
 
         # Category Distribution
         st.subheader("Category Distribution (Income vs Expense)")
