@@ -9,6 +9,7 @@ from utils.anomaly_detector import detect_large_transactions
 from utils.aggregator import add_time_features, monthly_summary
 from utils.anomaly_detector import detect_large_transactions, detect_anomalies
 from utils.categorizer import apply_categorization, assign_transaction_type
+from utils.health_score import calculate_financial_health_score
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -50,6 +51,31 @@ if uploaded_file:
         col2.metric("Total Expense", f"₹ {total_expense:,.2f}")
         col3.metric("Net Savings", f"₹ {net_savings:,.2f}")
 
+        st.divider()
+        st.subheader("🧠 Financial Health Score")
+
+        score, breakdown = calculate_financial_health_score(df)
+
+        col1, col2 = st.columns([1,2])
+
+        with col1:
+            st.metric("Health Score", f"{score} / 100")
+
+        with col2:
+            st.write("### Breakdown")
+            st.write(f"Savings Ratio: {breakdown['Savings Ratio']}%")
+            st.write(f"Large Transactions Count: {breakdown['Large Transactions']}")
+            st.write(f"AI Anomalies: {breakdown['Anomalies']}")
+            st.write(f"Top Category Concentration: {breakdown['Top Category Ratio']}%")
+
+        if score >= 80:
+            st.success("Excellent Financial Stability")
+        elif score >= 60:
+            st.info("Financially Stable but Room for Optimization")
+        elif score >= 40:
+            st.warning("Financial Risk Detected – Monitor Spending")
+        else:
+            st.error("High Financial Risk – Immediate Attention Recommended")
 
         st.divider()
 
