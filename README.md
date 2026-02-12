@@ -28,3 +28,12 @@ Built with discipline and intelligence.
 - Leetcode - https://leetcode.com/u/vinayhulsurkar24/
 - LinkedIn - https://www.linkedin.com/in/vinayhulsurkar
 - Instagram - https://www.instagram.com/vinayhulsurkar
+
+
+## Phase 2 Updates
+
+- Income vs Expense separation
+- Improved monthly formatting
+- Category-wise financial breakdown
+- ML-based anomaly detection
+
