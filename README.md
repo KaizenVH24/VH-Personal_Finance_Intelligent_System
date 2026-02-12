@@ -25,6 +25,6 @@ Built with discipline and intelligence.
 
 — VH24 aka Vinay Hulsurkar
 
-Leetcode - https://leetcode.com/u/vinayhulsurkar24/
-LinkedIn - https://www.linkedin.com/in/vinayhulsurkar
-Instagram - https://www.instagram.com/vinayhulsurkar
+- Leetcode - https://leetcode.com/u/vinayhulsurkar24/
+- LinkedIn - https://www.linkedin.com/in/vinayhulsurkar
+- Instagram - https://www.instagram.com/vinayhulsurkar
