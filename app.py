@@ -8,6 +8,7 @@ from utils.categorizer import apply_categorization
 from utils.anomaly_detector import detect_large_transactions
 from utils.aggregator import add_time_features, monthly_summary
 from utils.anomaly_detector import detect_large_transactions, detect_anomalies
+from utils.categorizer import apply_categorization, assign_transaction_type
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -29,6 +30,7 @@ if uploaded_file:
 
     df = load_data(uploaded_file)
     df = apply_categorization(df)
+    df = assign_transaction_type(df)
     df, threshold = detect_large_transactions(df)
     df = detect_anomalies(df)
     df = add_time_features(df)
@@ -40,40 +42,62 @@ if uploaded_file:
 
         col1, col2, col3 = st.columns(3)
 
-        col1.metric("Total Transactions", len(df))
-        col2.metric("Total Expense", f"₹ {df['amount'].sum():,.2f}")
-        col3.metric("Large Transaction Threshold", f"₹ {threshold:,.2f}")
+        total_income = df[df["transaction_type"] == "Income"]["amount"].sum()
+        total_expense = df[df["transaction_type"] == "Expense"]["amount"].sum()
+        net_savings = total_income - total_expense
+
+        col1.metric("Total Income", f"₹ {total_income:,.2f}")
+        col2.metric("Total Expense", f"₹ {total_expense:,.2f}")
+        col3.metric("Net Savings", f"₹ {net_savings:,.2f}")
+
 
         st.divider()
 
         # Category Distribution
-        st.subheader("Category Distribution")
+        st.subheader("Category Distribution (Income vs Expense)")
 
-        category_data = df.groupby("category")["amount"].sum().reset_index()
-        fig = px.pie(category_data, values="amount", names="category")
+        category_data = (
+            df.groupby(["transaction_type", "category"])["amount"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.bar(
+            category_data,
+            x="category",
+            y="amount",
+            color="transaction_type",
+            barmode="group"
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
-        st.divider()
 
         # Monthly Trend
         st.subheader("Monthly Spending Trend")
 
         monthly_data = (
-            df.groupby(["year", "month", "month_number"])["amount"]
+            df[df["transaction_type"] == "Expense"]
+            .groupby(["year", "month_number", "month"])["amount"]
             .sum()
             .reset_index()
             .sort_values(["year", "month_number"])
         )
 
+        monthly_data["year_month"] = (
+            monthly_data["month"].astype(str) + " " + monthly_data["year"].astype(str)
+        )
+
+
         fig2 = px.bar(
             monthly_data,
-            x="month",
+            x="year_month",
             y="amount",
-            color="year",
-            barmode="group"
+            color="year"
         )
 
         st.plotly_chart(fig2, use_container_width=True)
+
 
     elif page == "Transactions":
 
@@ -102,16 +126,24 @@ if uploaded_file:
 
     elif page == "Category Analysis":
 
-        st.subheader("📈 Category-wise Monthly Breakdown")
+        monthly_cat = (
+            df.groupby(["transaction_type", "year", "month_number", "month", "category"])["amount"]
+            .sum()
+            .reset_index()
+            .sort_values(["year", "month_number"])
+        )
 
-        monthly_cat = monthly_summary(df)
+        monthly_cat["year_month"] = (
+            monthly_cat["month"].astype(str) + " " + monthly_cat["year"].astype(str)
+        )
+
 
         fig3 = px.bar(
             monthly_cat,
-            x="month",
+            x="year_month",
             y="amount",
             color="category",
-            barmode="group"
+            facet_row="transaction_type"
         )
 
         st.plotly_chart(fig3, use_container_width=True)

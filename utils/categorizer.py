@@ -20,3 +20,11 @@ def categorize_transaction(description):
 def apply_categorization(df):
     df["category"] = df["description"].apply(categorize_transaction)
     return df
+
+def assign_transaction_type(df):
+
+    df["transaction_type"] = df["category"].apply(
+        lambda x: "Income" if x == "Salary" else "Expense"
+    )
+
+    return df
