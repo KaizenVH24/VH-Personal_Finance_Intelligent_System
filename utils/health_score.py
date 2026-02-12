@@ -1,3 +1,5 @@
+import pandas as pd
+
 def calculate_financial_health_score(df):
 
     income = df[df["transaction_type"] == "Income"]["amount"].sum()
@@ -9,18 +11,21 @@ def calculate_financial_health_score(df):
     savings = income - expense
     savings_ratio = savings / income
 
-    # Savings Score (40 points)
-    savings_score = max(0, min(40, savings_ratio * 40))
+    # Base score starts at 50
+    base_score = 50
 
-    # Large transaction penalty (15 points)
+    # Savings contribution (up to +30)
+    savings_score = savings_ratio * 30
+
+    # Large transaction penalty (max -10)
     large_count = df[df["is_large"] == True].shape[0]
-    large_penalty = min(15, large_count * 2)
+    large_penalty = min(10, large_count)
 
-    # Anomaly penalty (20 points)
+    # Anomaly penalty (max -10)
     anomaly_count = df[df["is_anomaly"] == True].shape[0]
-    anomaly_penalty = min(20, anomaly_count * 3)
+    anomaly_penalty = min(10, anomaly_count)
 
-    # Expense concentration risk (15 points)
+    # Concentration penalty (max -10)
     category_expense = (
         df[df["transaction_type"] == "Expense"]
         .groupby("category")["amount"]
@@ -32,18 +37,9 @@ def calculate_financial_health_score(df):
     else:
         top_category_ratio = 0
 
-    concentration_penalty = min(15, top_category_ratio * 15)
+    concentration_penalty = min(10, top_category_ratio * 10)
 
-    # Stability factor (10 points)
-    stability_score = 10 if savings_ratio > 0.2 else 5 if savings_ratio > 0 else 0
-
-    final_score = (
-        savings_score
-        + stability_score
-        - large_penalty
-        - anomaly_penalty
-        - concentration_penalty
-    )
+    final_score = base_score + savings_score - large_penalty - anomaly_penalty - concentration_penalty
 
     final_score = max(0, min(100, round(final_score)))
 
@@ -55,3 +51,22 @@ def calculate_financial_health_score(df):
     }
 
     return final_score, breakdown
+
+def monthly_health_trend(df):
+
+    monthly_groups = df.groupby(["year", "month_number"])
+
+    trend_data = []
+
+    for (year, month), group in monthly_groups:
+        score, _ = calculate_financial_health_score(group)
+        trend_data.append({
+            "year": year,
+            "month": month,
+            "score": score
+        })
+
+    trend_df = pd.DataFrame(trend_data)
+    trend_df = trend_df.sort_values(["year", "month"])
+
+    return trend_df

@@ -11,6 +11,10 @@ from utils.anomaly_detector import detect_large_transactions, detect_anomalies
 from utils.categorizer import apply_categorization, assign_transaction_type
 from utils.health_score import calculate_financial_health_score
 from utils.forecasting import forecast_next_months
+from utils.health_score import calculate_financial_health_score, monthly_health_trend
+from utils.savings_prediction import predict_savings
+from utils.insights import generate_insights
+from utils.report_generator import generate_pdf_report
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -79,6 +83,27 @@ if uploaded_file:
             st.error("High Financial Risk – Immediate Attention Recommended")
 
         st.divider()
+        
+        
+        st.subheader("📈 Financial Health Trend")
+
+        trend_df = monthly_health_trend(df)
+
+        import plotly.express as px
+
+        fig_health = px.line(
+            trend_df,
+            x=trend_df.index,
+            y="score",
+            markers=True
+        )
+
+        fig_health.update_layout(
+            xaxis_title="Month Index",
+            yaxis_title="Health Score"
+        )
+
+        st.plotly_chart(fig_health, use_container_width=True)
 
         st.divider()
         st.subheader("💰 Budget Planner")
@@ -214,6 +239,33 @@ if uploaded_file:
 
         st.plotly_chart(fig2, use_container_width=True)
 
+        st.subheader("💹 Savings Forecast (Next 3 Months)")
+
+        savings_pred = predict_savings(df)
+
+        if savings_pred is None:
+            st.info("Not enough data for savings prediction.")
+        else:
+            for i, value in enumerate(savings_pred, 1):
+                st.write(f"Month +{i}: ₹ {round(value,2)}")
+
+        st.subheader("🤖 Automated Financial Insights")
+
+        insights = generate_insights(df)
+
+        for insight in insights:
+            st.write("•", insight)
+
+        st.subheader("📄 Download Executive Report")
+
+        pdf_buffer = generate_pdf_report(df, score, breakdown, insights)
+
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_buffer,
+            file_name="PFIS_Report_VH24.pdf",
+            mime="application/pdf"
+        )
 
     elif page == "Transactions":
 
