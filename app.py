@@ -7,6 +7,7 @@ from utils.data_loader import load_data
 from utils.categorizer import apply_categorization
 from utils.anomaly_detector import detect_large_transactions
 from utils.aggregator import add_time_features, monthly_summary
+from utils.anomaly_detector import detect_large_transactions, detect_anomalies
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -29,7 +30,9 @@ if uploaded_file:
     df = load_data(uploaded_file)
     df = apply_categorization(df)
     df, threshold = detect_large_transactions(df)
+    df = detect_anomalies(df)
     df = add_time_features(df)
+
 
     if page == "Dashboard":
 
@@ -79,6 +82,16 @@ if uploaded_file:
         st.dataframe(df)
 
         st.subheader("🚨 Flagged Large Transactions")
+
+        st.subheader("🧠 AI-Detected Anomalies")
+
+        anomaly_df = df[df["is_anomaly"] == True]
+
+        if anomaly_df.empty:
+            st.success("No anomalies detected by AI model.")
+        else:
+            st.dataframe(anomaly_df)
+
 
         large_df = df[df["is_large"] == True]
 
