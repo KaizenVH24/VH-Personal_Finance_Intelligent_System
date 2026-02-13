@@ -1,4 +1,12 @@
 import pandas as pd
+from config import (
+    BASE_HEALTH_SCORE,
+    MAX_SAVINGS_CONTRIBUTION,
+    MAX_LARGE_TXN_PENALTY,
+    MAX_ANOMALY_PENALTY,
+    MAX_CONCENTRATION_PENALTY
+)
+
 
 def calculate_financial_health_score(df):
 
@@ -11,46 +19,74 @@ def calculate_financial_health_score(df):
     savings = income - expense
     savings_ratio = savings / income
 
-    # Base score starts at 50
-    base_score = 50
+    # Cap savings ratio between -1 and 1
+    savings_ratio = max(-1, min(1, savings_ratio))
 
-    # Savings contribution (up to +30)
-    savings_score = savings_ratio * 30
+    # Savings contribution
+    savings_score = savings_ratio * MAX_SAVINGS_CONTRIBUTION
 
-    # Large transaction penalty (max -10)
-    large_count = df[df["is_large"] == True].shape[0]
-    large_penalty = min(10, large_count)
+    # Large transaction penalty (proportional)
+    total_expense_txn = df[df["transaction_type"] == "Expense"].shape[0]
+    large_count = df[df["is_large"]].shape[0]
 
-    # Anomaly penalty (max -10)
-    anomaly_count = df[df["is_anomaly"] == True].shape[0]
-    anomaly_penalty = min(10, anomaly_count)
+    if total_expense_txn > 0:
+        large_ratio = large_count / total_expense_txn
+    else:
+        large_ratio = 0
 
-    # Concentration penalty (max -10)
-    category_expense = (
-        df[df["transaction_type"] == "Expense"]
-        .groupby("category")["amount"]
-        .sum()
+    large_penalty = min(
+        MAX_LARGE_TXN_PENALTY,
+        large_ratio * MAX_LARGE_TXN_PENALTY
     )
 
-    if len(category_expense) > 0:
+    # Anomaly penalty (proportional)
+    anomaly_count = df[df["is_anomaly"]].shape[0]
+
+    if total_expense_txn > 0:
+        anomaly_ratio = anomaly_count / total_expense_txn
+    else:
+        anomaly_ratio = 0
+
+    anomaly_penalty = min(
+        MAX_ANOMALY_PENALTY,
+        anomaly_ratio * MAX_ANOMALY_PENALTY
+    )
+
+    # Concentration penalty
+    expense_df = df[df["transaction_type"] == "Expense"]
+
+    if expense > 0 and not expense_df.empty:
+        category_expense = (
+            expense_df.groupby("category")["amount"].sum()
+        )
         top_category_ratio = category_expense.max() / expense
     else:
         top_category_ratio = 0
 
-    concentration_penalty = min(10, top_category_ratio * 10)
+    concentration_penalty = min(
+        MAX_CONCENTRATION_PENALTY,
+        top_category_ratio * MAX_CONCENTRATION_PENALTY
+    )
 
-    final_score = base_score + savings_score - large_penalty - anomaly_penalty - concentration_penalty
+    final_score = (
+        BASE_HEALTH_SCORE
+        + savings_score
+        - large_penalty
+        - anomaly_penalty
+        - concentration_penalty
+    )
 
     final_score = max(0, min(100, round(final_score)))
 
     breakdown = {
-        "Savings Ratio": round(savings_ratio * 100, 2),
-        "Large Transactions": large_count,
-        "Anomalies": anomaly_count,
-        "Top Category Ratio": round(top_category_ratio * 100, 2)
+        "Savings Ratio (%)": round(savings_ratio * 100, 2),
+        "Large Transaction Ratio (%)": round(large_ratio * 100, 2),
+        "Anomaly Ratio (%)": round(anomaly_ratio * 100, 2),
+        "Top Category Concentration (%)": round(top_category_ratio * 100, 2)
     }
 
     return final_score, breakdown
+
 
 def monthly_health_trend(df):
 
