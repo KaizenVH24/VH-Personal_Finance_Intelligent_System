@@ -1,4 +1,4 @@
-# 💰 Personal Finance Intelligent System (PFIS)
+# Personal Finance Intelligent System (PFIS)
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
@@ -7,11 +7,11 @@
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
 > AI-Powered Financial Intelligence Dashboard  
-> Built with discipline and intelligence — **VH24**
+> Built with discipline and intelligence — **VH24 aka Vinay Hulsurkar**
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Personal Finance Intelligent System (PFIS) is a full-stack financial analytics platform designed to transform raw bank transaction data into intelligent financial insights.
 
@@ -130,7 +130,7 @@ personal-finance-intelligent-system/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Python**
 - **Pandas**
