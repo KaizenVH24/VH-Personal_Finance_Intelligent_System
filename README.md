@@ -1,165 +1,294 @@
 # Personal Finance Intelligent System (PFIS)
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
+![Streamlit](https://img.shields.io/badge/Streamlit-Interactive_Dashboard-red)
 ![Machine Learning](https://img.shields.io/badge/ML-IsolationForest-green)
-![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen)
+![Architecture](https://img.shields.io/badge/Architecture-Modular-orange)
+![Status](https://img.shields.io/badge/Status-VH_v3.5-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-> AI-Powered Financial Intelligence Dashboard  
-> Built with discipline and intelligence — **VH24 aka Vinay Hulsurkar**
+> AI-Powered Financial Intelligence Platform  
+> Engineered with discipline and analytical precision — **VH24 aka Vinay Hulsurkar**
 
 ---
 
-## Overview
+# Executive Summary
 
-Personal Finance Intelligent System (PFIS) is a full-stack financial analytics platform designed to transform raw bank transaction data into intelligent financial insights.
+Personal Finance Intelligent System (PFIS) is a modular, end-to-end financial analytics platform that transforms raw bank transaction data into structured intelligence, risk insights, predictive forecasts and executive-ready financial reports.
 
-The system performs:
+This system is not a static dashboard, it is a structured financial intelligence engine integrating:
 
-- Transaction categorization
-- Anomaly detection using machine learning
-- Predictive forecasting
-- Financial health scoring
-- Budget comparison
-- Automated executive reporting
+- Data validation and cleansing
+- Behavioral transaction categorization
+- Statistical anomaly detection
+- Composite financial health modeling
+- Predictive expense & savings forecasting
+- Automated insight generation
+- Executive PDF reporting
 
-This project demonstrates end-to-end data engineering, machine learning integration, and product-level thinking in fintech systems.
-
----
-
-## Core Capabilities
-
-### Transaction Intelligence Engine
-- Rule-based transaction categorization
-- Automatic Income vs Expense separation
-- Weekly / Monthly / Yearly aggregation
-- Statistical large transaction detection
-- ML-based anomaly detection using Isolation Forest
+Built as a production-grade final year project with scalability, explainability and system design principles in mind.
 
 ---
 
-### Financial Health Scoring System
+# System Architecture Overview
 
-Composite Financial Health Score (0–100) based on:
+PFIS follows a layered modular architecture:
 
-- Savings ratio
-- Spending concentration risk
-- Large transaction frequency
-- Anomaly frequency
-- Stability indicators
+```
+UI Layer (Streamlit)
+        ↓
+Business Logic Layer (utils/)
+        ↓
+Statistical & ML Layer
+        ↓
+Configuration Layer (config.py)
+        ↓
+Data Input Layer (CSV ingestion)
+```
 
-Includes:
-- Overall health score
-- Monthly health trend visualization
+This separation ensures:
 
----
-
-### Predictive Analytics Module
-
-- Total monthly expense forecasting
-- Category-wise expense forecasting
-- Savings prediction model
-- 95% confidence interval bands
-- Trend-based linear regression modeling
-
----
-
-### Budget Planning Module
-
-- Custom monthly budget input
-- Average expense comparison
-- Over-budget / under-budget analysis
-- Financial risk feedback
+- Maintainability
+- Scalability
+- Config-driven system tuning
+- Clean engineering practices
+- Interview-defensible structure
 
 ---
 
-### Automated Insight Engine
-
-Generates system-driven financial commentary:
-
-- Spending discipline analysis
-- Highest expense category detection
-- Risk alerts
-- Savings behavior summary
+# Core System Capabilities
 
 ---
 
-### Executive Report Generator
+## 1️⃣ Transaction Intelligence Engine
 
-Downloadable PDF report including:
+### ✔ Schema Validation
+- Required column enforcement (`date`, `description`, `amount`)
+- Currency symbol normalization
+- Duplicate removal
+- Chronological sorting
+- Type coercion and null handling
+
+### ✔ Categorization Framework
+- Config-driven keyword classification
+- Whole-word regex matching
+- Income vs Expense inference
+- Refund detection logic
+- Extendable category system
+
+### ✔ Time Feature Engineering
+- Year, month, ISO week extraction
+- `year_month` period construction
+- Aggregation-ready time indexing
+
+---
+
+## 2️⃣ Anomaly & Risk Detection Layer
+
+### Large Transaction Detection
+Statistical thresholding:
+```
+Threshold = Mean + (k × Standard Deviation)
+```
+Configurable multiplier via `config.py`.
+
+### Unsupervised ML Anomaly Detection
+- Isolation Forest (Scikit-learn)
+- Configurable contamination rate
+- Applied only to expense behavior
+- Ratio-based penalty modeling
+
+This ensures explainability and risk quantification.
+
+---
+
+## 3️⃣ Financial Health Scoring Engine (0–100)
+
+A composite scoring model incorporating:
+
+- Savings Ratio
+- Large Transaction Frequency
+- Anomaly Ratio
+- Spending Concentration Risk
+- Monthly Stability Indicators
+
+Mathematically structured as:
+
+```
+Final Score =
+Base Score
++ Savings Contribution
+- Risk Penalties
+- Concentration Adjustment
+```
+
+All weights are configurable through `config.py`.
+
+### Output Includes:
+- Overall Health Score
+- Ratio-based breakdown
+- Monthly Health Trend visualization
+
+---
+
+## 4️⃣ Predictive Analytics Module
+
+### Expense Forecasting
+- Time-indexed Linear Regression
+- Category-wise forecasting
+- Future period generation
+- Residual-based 95% confidence intervals
+
+Model form:
+```
+Expense(t) = β0 + β1 × Time
+```
+
+### Savings Forecasting
+- Derived from Income − Expense
+- Trend-based projection
+- Confidence interval bands
+- Volatility awareness
+
+Forecast horizon configurable.
+
+---
+
+## 5️⃣ Budget Intelligence Module
+
+- Dynamic user-defined budget input
+- Average monthly expense calculation
+- Over-budget / Under-budget feedback
+- Financial behavior signal generation
+
+---
+
+## 6️⃣ Automated Insight Engine
+
+Rule-based financial heuristics generate:
+
+- Savings discipline classification
+- Spending concentration warnings
+- Anomaly frequency alerts
+- Monthly savings volatility detection
+- Behavioral risk commentary
+
+Insight generation is deterministic, explainable, and data-driven.
+
+---
+
+## 7️⃣ Executive Report Generator
+
+PDF generation using ReportLab including:
 
 - Income / Expense summary
 - Net savings
-- Financial health score
-- Risk breakdown
+- Financial health breakdown
+- Risk indicators
 - Automated insights
+- Professional structured layout
 
-Designed for executive-level presentation.
+Designed for executive presentation.
 
 ---
 
-## Project Architecture
+# Project Structure
 
 ```
 personal-finance-intelligent-system/
 │
-├── app.py
-├── config.py
+├── app.py                     # UI Layer
+├── config.py                  # Central configuration & system tuning
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
 │
 ├── utils/
-│   ├── data_loader.py
-│   ├── categorizer.py
-│   ├── anomaly_detector.py
-│   ├── aggregator.py
-│   ├── health_score.py
-│   ├── forecasting.py
-│   ├── savings_prediction.py
-│   ├── insights.py
-│   ├── report_generator.py
+│   ├── data_loader.py         # Data validation & cleaning
+│   ├── categorizer.py         # Transaction classification
+│   ├── anomaly_detector.py    # Statistical + ML anomaly detection
+│   ├── aggregator.py          # Time feature engineering
+│   ├── health_score.py        # Composite financial scoring
+│   ├── forecasting.py         # Expense forecasting
+│   ├── savings_prediction.py  # Savings forecasting
+│   ├── insights.py            # Insight generation engine
+│   ├── report_generator.py    # Executive PDF reporting
 │
 ├── assets/
 │   ├── sample_transactions.csv
 │   ├── sample_transactions_large.csv
-│
+│   ├── Bank_statement.csv
 └── venv/ (ignored)
 ```
 
 ---
 
-## Tech Stack
+# Tech Stack
 
-- **Python**
-- **Pandas**
-- **NumPy**
-- **Scikit-learn**
-- **Streamlit**
-- **Plotly**
-- **ReportLab**
+- **Python 3.10+**
+- **Pandas** – Data manipulation
+- **NumPy** – Numerical computation
+- **Scikit-learn** – Isolation Forest & Regression
+- **Streamlit** – Interactive UI
+- **Plotly** – Data visualization
+- **ReportLab** – PDF generation
 
 ---
 
-## Installation & Setup
+# Mathematical & ML Foundations
 
-### 1️⃣ Clone Repository
+### Large Transaction Detection
+```
+x > μ + kσ
+```
+
+### Isolation Forest
+Unsupervised anomaly detection using tree isolation depth.
+
+### Forecasting
+```
+y = β0 + β1t
+```
+
+### Confidence Interval
+```
+Prediction ± (Z × Residual Std Dev)
+```
+
+### Health Score
+Composite weighted risk model with proportional penalties.
+
+---
+
+# Engineering Principles Applied
+
+- Modular architecture
+- Configuration-driven behavior
+- Defensive data handling
+- Explainable ML modeling
+- No hardcoded magic numbers
+- Separation of computation & UI
+- Deterministic scoring logic
+- Maintainable code structure
+
+---
+
+# Installation & Setup
+
+### Clone Repository
 
 ```bash
 git clone https://github.com/KaizenVH24/VH-Personal_Finance_Intelligent_System.git
 cd VH-Personal_Finance_Intelligent_System
 ```
 
----
-
-### 2️⃣ Create Virtual Environment
+### Create Virtual Environment
 
 ```bash
 python -m venv venv
 ```
 
-Activate environment:
+Activate:
 
 **Windows**
 ```bash
@@ -171,17 +300,13 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
----
-
-### 3️⃣ Install Dependencies
+### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-### 4️⃣ Run Application
+### Run Application
 
 ```bash
 streamlit run app.py
@@ -189,115 +314,51 @@ streamlit run app.py
 
 ---
 
-## Sample Datasets
+# Future Expansion Roadmap
 
-Located in `/assets`:
-
-- `sample_transactions.csv`
-- `sample_transactions_large.csv`
-
-Both contain multi-month income and expense data for testing.
-
----
-
-## Financial Modeling Approach
-
-### Large Transaction Detection
-Statistical threshold:
-```
-mean + k * standard deviation
-```
-
-### Anomaly Detection
-Unsupervised ML using:
-```
-Isolation Forest
-```
-
-### Forecasting Model
-Time-indexed Linear Regression:
-```
-Expense ~ Time
-```
-
-Confidence bands calculated using residual standard deviation.
-
-### Financial Health Score
-Weighted composite scoring model:
-
-- Base Score
-- Savings Contribution
-- Risk Penalties
-- Concentration Risk Adjustment
-
-Explainable and modular.
-
----
-
-## Design Principles
-
-- Modular architecture
-- Separation of UI and business logic
-- Explainable ML models
-- Reproducible environment
-- Fintech-inspired system design
-- Clean and scalable code structure
-
----
-
-## Demonstrated Concepts
-
-This project showcases:
-
-- Data preprocessing & cleaning
-- Feature engineering
-- Unsupervised learning
-- Time-series forecasting
-- Risk modeling
-- Dashboard engineering
-- Report automation
-- Full-stack integration
-
----
-
-## Future Roadmap
-
-- Prophet-based advanced forecasting
-- Real-time transaction ingestion
-- Database integration (PostgreSQL)
-- User authentication system
+- Prophet-based seasonal forecasting
+- Real-time API ingestion
+- PostgreSQL integration
+- User authentication & session handling
+- Behavioral clustering using KMeans
+- Multi-user financial analytics
 - Cloud deployment (AWS / Streamlit Cloud)
-- Goal-based financial planning engine
-- Behavioral spending clustering
+- REST API backend separation
+- Dashboard theming & UX enhancement
 
 ---
 
-## Interview Discussion Points
+# Interview Talking Points
 
-If asked about the project:
+When presenting this project:
 
-> Built an intelligent financial analytics system integrating anomaly detection, forecasting, composite health scoring, and automated reporting using modular Python architecture and Streamlit.
+> Built a modular financial intelligence platform integrating anomaly detection, predictive modeling, composite scoring systems and executive reporting with configuration-driven architecture.
 
 Demonstrates:
-- ML integration
-- Data-driven decision modeling
-- Product-level thinking
-- Clean engineering practices
+
+- Machine Learning integration
+- Financial risk modeling
+- Statistical reasoning
+- Data engineering
+- System design thinking
+- Product-level development maturity
 
 ---
 
-## Author
+# Author
 
 **Vinay Hulsurkar (VH24)**  
 Computer Engineering  
-Focused on Data Science & Intelligent Systems
+Focused on Data Science & Intelligent Systems  
 
 Built with discipline and long-term vision.
+
 - Leetcode - https://leetcode.com/u/vinayhulsurkar24/
 - LinkedIn - https://www.linkedin.com/in/vinayhulsurkar
 - Instagram - https://www.instagram.com/vinayhulsurkar
+
 ---
 
-## License
+# 📜 License
 
 This project is licensed under the MIT License.
