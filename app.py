@@ -57,7 +57,7 @@ if uploaded_file:
     # ============================
     if page == "Dashboard":
 
-        st.subheader("📊 Financial Overview")
+        st.subheader("Financial Overview")
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Income", f"₹ {total_income:,.2f}")
@@ -67,7 +67,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Health Score =================
-        st.subheader("🧠 Financial Health Score")
+        st.subheader("Financial Health Score")
 
         col1, col2 = st.columns([1, 2])
         col1.metric("Health Score", f"{score} / 100")
@@ -89,7 +89,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Health Trend =================
-        st.subheader("📈 Financial Health Trend")
+        st.subheader("Financial Health Trend")
 
         trend_df = monthly_health_trend(df)
 
@@ -105,7 +105,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Budget Planner =================
-        st.subheader("💰 Budget Planner")
+        st.subheader("Budget Planner")
 
         monthly_budget = st.number_input(
             "Enter Monthly Budget (₹)",
@@ -129,7 +129,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Expense Forecast =================
-        st.subheader("🔮 Expense Forecast")
+        st.subheader("Expense Forecast")
 
         categories = df[df["transaction_type"] == "Expense"]["category"].unique()
         selected_category = st.selectbox(
@@ -183,7 +183,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Savings Forecast =================
-        st.subheader("💹 Savings Forecast")
+        st.subheader("Savings Forecast")
 
         savings_result = predict_savings(df)
 
@@ -196,7 +196,7 @@ if uploaded_file:
         st.divider()
 
         # ================= Insights =================
-        st.subheader("🤖 Automated Insights")
+        st.subheader("Automated Insights")
 
         for insight in insights:
             st.write("•", insight)
@@ -204,7 +204,7 @@ if uploaded_file:
         st.divider()
 
         # ================= PDF =================
-        st.subheader("📄 Download Executive Report")
+        st.subheader("Download Executive Report")
 
         pdf_buffer = generate_pdf_report(df, score, breakdown, insights)
 
@@ -220,13 +220,13 @@ if uploaded_file:
     # ============================
     elif page == "Transactions":
 
-        st.subheader("📋 All Transactions")
+        st.subheader("All Transactions")
         st.dataframe(df)
 
-        st.subheader("🚨 Large Transactions")
+        st.subheader("Large Transactions")
         st.dataframe(df[df["is_large"]])
 
-        st.subheader("🧠 Anomalies")
+        st.subheader("Anomalies")
         st.dataframe(df[df["is_anomaly"]])
 
     # ============================
