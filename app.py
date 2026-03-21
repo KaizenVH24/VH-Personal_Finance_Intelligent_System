@@ -186,7 +186,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "Upload Statement",
         type=["csv", "xlsx", "xls", "pdf"],
-        help="Supports Slice PDF, or any CSV/Excel with date, description, amount columns.",
+        help="Supports Bank Statement PDF, or any CSV/Excel with date, description, amount columns.",
     )
 
     st.divider()
