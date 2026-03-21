@@ -1,111 +1,83 @@
-import pandas as pd
+"""
+forecasting.py
+Linear trend forecasting for monthly expenses (total or per category).
+"""
+
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 from config import FORECAST_PERIODS, CONFIDENCE_MULTIPLIER
 
 
-def prepare_monthly_expense_data(df, category=None):
-    """
-    Aggregates monthly expense data.
-    Optionally filters by category.
-    """
-
-    expense_df = df[df["transaction_type"] == "Expense"]
-
+def _build_monthly_series(df, category: str | None = None) -> pd.DataFrame:
+    subset = df[df["transaction_type"] == "Expense"].copy()
     if category:
-        expense_df = expense_df[expense_df["category"] == category]
-
-    if expense_df.empty:
+        subset = subset[subset["category"] == category]
+    if subset.empty:
         return pd.DataFrame()
 
-    monthly_expense = (
-        expense_df
+    monthly = (
+        subset
         .groupby(["year", "month_number"])["amount"]
         .sum()
         .reset_index()
         .sort_values(["year", "month_number"])
     )
-
-    # Create display-friendly year_month
-    monthly_expense["year_month"] = (
-        monthly_expense["year"].astype(str)
-        + "-"
-        + monthly_expense["month_number"].astype(str).str.zfill(2)
+    monthly["year_month"] = (
+        monthly["year"].astype(str) + "-" +
+        monthly["month_number"].astype(str).str.zfill(2)
     )
+    monthly["time_index"] = np.arange(len(monthly))
+    return monthly
 
 
-    # Create continuous time index for regression
-    monthly_expense["time_index"] = np.arange(len(monthly_expense))
+def _next_months(last_year: int, last_month: int, n: int) -> list[str]:
+    labels = []
+    y, m = last_year, last_month
+    for _ in range(n):
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+        labels.append(f"{y}-{str(m).zfill(2)}")
+    return labels
 
-    return monthly_expense
 
-
-def forecast_next_months(df, periods=None, category=None):
+def forecast_next_months(df, periods: int = None, category: str = None):
     """
-    Forecast future expenses using linear regression.
-    Returns historical data and forecast dataframe.
-    """
+    Returns (historical_df, forecast_df) or None if insufficient data.
 
+    forecast_df columns: year_month, predicted_expense, lower_bound, upper_bound
+    """
     if periods is None:
         periods = FORECAST_PERIODS
 
-    monthly_data = prepare_monthly_expense_data(df, category)
-
-    if len(monthly_data) < 2:
+    monthly = _build_monthly_series(df, category)
+    if len(monthly) < 2:
         return None
 
-    X = monthly_data[["time_index"]]
-    y = monthly_data["amount"]
+    X = monthly[["time_index"]]
+    y = monthly["amount"]
 
     model = LinearRegression()
     model.fit(X, y)
 
-    last_index = monthly_data["time_index"].max()
+    last_idx   = int(monthly["time_index"].max())
+    future_idx = np.arange(last_idx + 1, last_idx + 1 + periods).reshape(-1, 1)
+    preds      = model.predict(future_idx)
 
-    future_indices = np.arange(
-        last_index + 1,
-        last_index + 1 + periods
-    ).reshape(-1, 1)
+    std_err    = (y - model.predict(X)).std()
+    margin     = CONFIDENCE_MULTIPLIER * std_err
 
-    predictions = model.predict(future_indices)
-
-    # Residual-based confidence interval
-    residuals = y - model.predict(X)
-    std_error = residuals.std()
-
-    lower_bound = predictions - (CONFIDENCE_MULTIPLIER * std_error)
-    upper_bound = predictions + (CONFIDENCE_MULTIPLIER * std_error)
-
-    # Generate proper future year_month labels
-    last_year = monthly_data["year"].iloc[-1]
-    last_month = monthly_data["month_number"].iloc[-1]
-
-    future_years = []
-    future_months = []
-
-    year = last_year
-    month = last_month
-
-    for _ in range(periods):
-        month += 1
-        if month > 12:
-            month = 1
-            year += 1
-
-        future_years.append(year)
-        future_months.append(month)
-
-    future_year_month = [
-        f"{y}-{str(m).zfill(2)}"
-        for y, m in zip(future_years, future_months)
-    ]
+    labels = _next_months(
+        int(monthly["year"].iloc[-1]),
+        int(monthly["month_number"].iloc[-1]),
+        periods,
+    )
 
     forecast_df = pd.DataFrame({
-        "year_month": future_year_month,
-        "predicted_expense": predictions,
-        "lower_bound": lower_bound,
-        "upper_bound": upper_bound
+        "year_month":        labels,
+        "predicted_expense": preds,
+        "lower_bound":       preds - margin,
+        "upper_bound":       preds + margin,
     })
-
-
-    return monthly_data, forecast_df
+    return monthly, forecast_df
