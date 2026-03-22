@@ -1,28 +1,27 @@
 """
-recurring.py
+utils/recurring.py
+==================
 Detects recurring transactions — subscriptions, EMIs, regular transfers.
 
 A transaction is considered recurring if:
-  • Amount matches within ±RECURRING_AMOUNT_TOLERANCE (%)
   • Merchant/description is the same
-  • Appears at least RECURRING_MIN_OCCURRENCES times
-  • Optionally, occurs on similar calendar days (within RECURRING_DAY_WINDOW)
+  • Amount matches within ±RECURRING_AMOUNT_TOLERANCE (%)
+  • Appears in at least RECURRING_MIN_OCCURRENCES distinct calendar months
 """
 
 import pandas as pd
 from config import (
     RECURRING_AMOUNT_TOLERANCE,
     RECURRING_MIN_OCCURRENCES,
-    RECURRING_DAY_WINDOW,
 )
 
 
-def detect_recurring(df) -> pd.DataFrame:
+def detect_recurring(df: pd.DataFrame) -> pd.DataFrame:
     """
     Returns a summary DataFrame of detected recurring transactions.
 
-    Columns: merchant, category, amount, frequency, first_seen, last_seen,
-             likely_day, transaction_type
+    Columns: merchant, category, amount, frequency, months_active,
+             first_seen, last_seen, likely_day, transaction_type
     """
     if df.empty:
         return pd.DataFrame()
@@ -31,59 +30,60 @@ def detect_recurring(df) -> pd.DataFrame:
     if expenses.empty:
         return pd.DataFrame()
 
-    # Group by merchant and look for similar amounts
     records = []
 
     for merchant, group in expenses.groupby("merchant"):
         if len(group) < RECURRING_MIN_OCCURRENCES:
             continue
 
-        # Sort by amount to find clusters
-        group = group.sort_values("amount")
+        group   = group.sort_values("amount")
         amounts = group["amount"].values
+        visited = set()
 
-        i = 0
-        while i < len(amounts):
-            anchor = amounts[i]
-            lo     = anchor * (1 - RECURRING_AMOUNT_TOLERANCE)
-            hi     = anchor * (1 + RECURRING_AMOUNT_TOLERANCE)
-
-            cluster_mask = (amounts >= lo) & (amounts <= hi)
-            cluster      = group[cluster_mask]
-
-            if len(cluster) >= RECURRING_MIN_OCCURRENCES:
-                days = cluster["date"].dt.day
-                likely_day = int(days.mode().iloc[0]) if not days.mode().empty else None
-
-                # Check if transactions are roughly periodic (not all on the same day)
-                unique_months = cluster["year_month"].nunique()
-                if unique_months >= RECURRING_MIN_OCCURRENCES:
-                    records.append({
-                        "merchant":        merchant,
-                        "category":        cluster["category"].mode().iloc[0],
-                        "amount":          round(float(cluster["amount"].mean()), 2),
-                        "frequency":       len(cluster),
-                        "months_active":   unique_months,
-                        "first_seen":      cluster["date"].min().date(),
-                        "last_seen":       cluster["date"].max().date(),
-                        "likely_day":      likely_day,
-                        "transaction_type": "Expense",
-                    })
-                # Advance past this cluster
-                i = int(cluster_mask.sum()) + (i - cluster_mask[:i].sum())
+        for i in range(len(amounts)):
+            if i in visited:
                 continue
-            i += 1
+
+            anchor = amounts[i]
+            lo, hi = anchor * (1 - RECURRING_AMOUNT_TOLERANCE), anchor * (1 + RECURRING_AMOUNT_TOLERANCE)
+
+            cluster_indices = [j for j, a in enumerate(amounts) if lo <= a <= hi]
+            cluster         = group.iloc[cluster_indices]
+
+            if len(cluster) < RECURRING_MIN_OCCURRENCES:
+                visited.update(cluster_indices)
+                continue
+
+            unique_months = cluster["year_month"].nunique()
+            if unique_months < RECURRING_MIN_OCCURRENCES:
+                visited.update(cluster_indices)
+                continue
+
+            days       = cluster["date"].dt.day
+            likely_day = int(days.mode().iloc[0]) if not days.mode().empty else None
+
+            records.append({
+                "merchant":         merchant,
+                "category":         cluster["category"].mode().iloc[0],
+                "amount":           round(float(cluster["amount"].mean()), 2),
+                "frequency":        len(cluster),
+                "months_active":    unique_months,
+                "first_seen":       cluster["date"].min().date(),
+                "last_seen":        cluster["date"].max().date(),
+                "likely_day":       likely_day,
+                "transaction_type": "Expense",
+            })
+            visited.update(cluster_indices)
 
     if not records:
         return pd.DataFrame()
 
-    result = (
+    return (
         pd.DataFrame(records)
         .drop_duplicates(subset=["merchant", "amount"])
         .sort_values("amount", ascending=False)
         .reset_index(drop=True)
     )
-    return result
 
 
 def monthly_recurring_total(recurring_df: pd.DataFrame) -> float:

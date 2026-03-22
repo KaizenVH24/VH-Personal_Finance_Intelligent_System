@@ -1,33 +1,44 @@
 """
-categorizer.py
+utils/categorizer.py
+====================
 Turns raw bank descriptions into clean merchant names and categories.
 
 Handles:
-  • UPI Debit/Credit strings (most common in Indian statements)
+  • UPI Debit/Credit strings  — most common in Indian statements
   • NEFT / IMPS transfers
-  • Opaque alphanumeric codes
-  • Plain text descriptions (monies transfer, Repayment, etc.)
+  • Opaque alphanumeric codes  — e.g. "NEFT/RTGS000123456"
+  • Plain-text descriptions    — e.g. "Loan Repayment", "Bill Payment"
+  • UPI handles                — extracts merchant from VPA (e.g. amzn0026@axisbank)
 """
 
 import re
+import pandas as pd
 from config import MERCHANT_MAP
 
 
-# ── UPI description dissection ──────────────────────────────────────────────
+# ── Regex patterns for UPI / NEFT / IMPS strings ─────────────────────────────
 
 _UPI_RE = re.compile(
-    r"UPI\s+(?:Debit|Credit)[-–\s]+(.+?)[-–\s]+[\w.\-]+@[\w]+",
+    r"UPI[\s\-/]+(?:Debit|Credit|DR|CR)[\s\-/]+(.+?)[\s\-/]+[\w.\-]+@[\w]+",
+    re.IGNORECASE | re.UNICODE,
+)
+_UPI_TO_RE = re.compile(
+    r"UPI(?:[\s\-/]+\w+)*[\s\-/]+(?:to|from|by)[\s\-/]+(.+?)[\s\-/@]",
     re.IGNORECASE | re.UNICODE,
 )
 _NEFT_RE = re.compile(
-    r"(?:NEFT|IMPS)\s+(?:Credit|Debit)[-–\s]+(.+?)[-–\s]",
+    r"(?:NEFT|IMPS|RTGS)[\s\-/]+(?:Credit|Debit|CR|DR)?[\s\-/]+(.+?)(?:[\s\-/]|$)",
     re.IGNORECASE,
 )
+_UPI_HANDLE_RE = re.compile(r"([\w.\-]+)@[\w]+", re.IGNORECASE)
 
 
 def _extract_entity_name(description: str) -> str:
-    """Pull the human-readable entity name out of a UPI / NEFT description."""
+    """Pull the human-readable entity name from a UPI / NEFT description."""
     m = _UPI_RE.search(description)
+    if m:
+        return m.group(1).strip()
+    m = _UPI_TO_RE.search(description)
     if m:
         return m.group(1).strip()
     m = _NEFT_RE.search(description)
@@ -48,69 +59,80 @@ def _apply_merchant_map(text: str) -> tuple[str, str]:
     return None, None
 
 
-def _clean_entity_name(raw: str) -> str:
-    """Turn 'NITIN A ZADPE' or 'Mr Om Sanjay Shikare' into a tidy display name."""
-    # Remove honorifics
+def _clean_person_name(raw: str) -> str:
+    """
+    Tidy up person names from UPI: 'NITIN A ZADPE' → 'Nitin A Zadpe'.
+    Strips honorifics and excess whitespace.
+    """
     raw = re.sub(r"^(Mr|Mrs|Ms|Dr|Prof)\.?\s+", "", raw, flags=re.IGNORECASE)
-    # Title-case and strip
-    return raw.strip().title()
+    # Remove trailing noise: numbers, ref codes
+    raw = re.sub(r"[\s_\-]+\d+$", "", raw).strip()
+    return raw.strip().title()[:40]
 
 
 def categorize_transaction(description: str) -> tuple[str, str]:
     """
     Return (merchant_display_name, category) for a raw bank description.
 
-    Priority:
-    1. Match full description against MERCHANT_MAP
-    2. Extract entity name from UPI/NEFT, then match again
-    3. Use cleaned entity name with category 'Others'
+    Resolution order:
+    1. Full description → MERCHANT_MAP                   (catches bill payments, etc.)
+    2. Extracted entity → MERCHANT_MAP                   (catches UPI merchant names)
+    3. UPI handle       → MERCHANT_MAP                   (e.g. amzn@axisbank → Amazon)
+    4. Cleaned entity name, category = 'Others'          (personal transfers)
+    5. Fallback: truncated, title-cased description
     """
-    # 1. Try full description first (catches 'monies transfer', 'repayment', etc.)
-    name, cat = _apply_merchant_map(description)
+    if not description or str(description).strip().lower() in ("", "nan", "-"):
+        return "Unknown", "Others"
+
+    desc = str(description).strip()
+
+    # 1. Try full description
+    name, cat = _apply_merchant_map(desc)
     if name:
         return name, cat
 
-    # 2. Extract entity and try again
-    entity = _extract_entity_name(description)
-    if entity and entity != description:
+    # 2. Extract entity and try
+    entity = _extract_entity_name(desc)
+    if entity and entity != desc:
         name, cat = _apply_merchant_map(entity)
         if name:
             return name, cat
-        # Also try UPI handle (sometimes the merchant is in the handle, e.g. amzn0026...)
-        handle_match = re.search(r"([\w.\-]+)@[\w]+", description, re.IGNORECASE)
-        if handle_match:
-            name, cat = _apply_merchant_map(handle_match.group(1))
+
+        # 3. Try from UPI handle (VPA)
+        handle_m = _UPI_HANDLE_RE.search(desc)
+        if handle_m:
+            name, cat = _apply_merchant_map(handle_m.group(1))
             if name:
                 return name, cat
 
-    # 3. Opaque alphanumeric description — return cleaned entity name
-    if entity and entity != description:
-        return _clean_entity_name(entity), "Others"
+        # 4. Personal name transfer
+        return _clean_person_name(entity), "Others"
 
-    # 4. Short generic entries
-    desc_lower = description.lower().strip()
-    if desc_lower in ("", "-", "nan"):
-        return "Unknown", "Others"
-
-    return description.strip().title()[:40], "Others"
+    # 5. Generic fallback — clean up the description itself
+    # Remove ref numbers / numeric suffixes
+    cleaned = re.sub(r"\b\d{8,}\b", "", desc).strip()
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    return cleaned[:40].strip().title() or "Unknown", "Others"
 
 
-def apply_categorization(df):
-    """Add 'merchant' and 'category' columns to the dataframe."""
+def apply_categorization(df: pd.DataFrame) -> pd.DataFrame:
+    """Add 'merchant' and 'category' columns to the DataFrame."""
     results = df["description"].apply(categorize_transaction)
-    df["merchant"]  = results.apply(lambda x: x[0])
-    df["category"]  = results.apply(lambda x: x[1])
+    df = df.copy()
+    df["merchant"] = results.apply(lambda x: x[0])
+    df["category"] = results.apply(lambda x: x[1])
     return df
 
 
-def assign_transaction_type(df):
+def assign_transaction_type(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add 'transaction_type' column.
 
-    Rule:
-      is_credit=True  → Income
-      is_credit=False → Expense  (EMI/Loan and Investments are still expenses — money left)
-    Simple, correct, and consistent with how bank statements work.
+    is_credit=True  → Income
+    is_credit=False → Expense
+
+    Note: Investments and EMI/Loans are still Expenses — money leaving the account.
     """
+    df = df.copy()
     df["transaction_type"] = df["is_credit"].map({True: "Income", False: "Expense"})
     return df
