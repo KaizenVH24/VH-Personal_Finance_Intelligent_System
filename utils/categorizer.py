@@ -1,14 +1,7 @@
 """
 utils/categorizer.py
 ====================
-Turns raw bank descriptions into clean merchant names and categories.
-
-Handles:
-  • UPI Debit/Credit strings  — most common in Indian statements
-  • NEFT / IMPS transfers
-  • Opaque alphanumeric codes  — e.g. "NEFT/RTGS000123456"
-  • Plain-text descriptions    — e.g. "Loan Repayment", "Bill Payment"
-  • UPI handles                — extracts merchant from VPA (e.g. amzn0026@axisbank)
+Improved transaction categorization with robust text cleaning.
 """
 
 import re
@@ -16,42 +9,57 @@ import pandas as pd
 from config import MERCHANT_MAP
 
 
-# ── Regex patterns for UPI / NEFT / IMPS strings ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# NEW: Normalization layer (BIG upgrade)
+# ─────────────────────────────────────────────────────────────
+
+def normalize_description(desc: str) -> str:
+    """
+    Clean messy transaction strings like:
+    AMZN/US/12345 → amzn us
+    UPI-XYZ@okaxis → xyz
+    """
+    if not desc:
+        return ""
+
+    desc = str(desc).lower()
+
+    # Remove UPI handles
+    desc = re.sub(r"[\w\.-]+@[\w]+", " ", desc)
+
+    # Replace special chars with space
+    desc = re.sub(r"[^a-z\s]", " ", desc)
+
+    # Remove extra spaces
+    desc = re.sub(r"\s+", " ", desc)
+
+    return desc.strip()
+
+
+# ─────────────────────────────────────────────────────────────
+# EXISTING REGEX (kept, slightly improved)
+# ─────────────────────────────────────────────────────────────
 
 _UPI_RE = re.compile(
     r"UPI[\s\-/]+(?:Debit|Credit|DR|CR)[\s\-/]+(.+?)[\s\-/]+[\w.\-]+@[\w]+",
-    re.IGNORECASE | re.UNICODE,
-)
-_UPI_TO_RE = re.compile(
-    r"UPI(?:[\s\-/]+\w+)*[\s\-/]+(?:to|from|by)[\s\-/]+(.+?)[\s\-/@]",
-    re.IGNORECASE | re.UNICODE,
-)
-_NEFT_RE = re.compile(
-    r"(?:NEFT|IMPS|RTGS)[\s\-/]+(?:Credit|Debit|CR|DR)?[\s\-/]+(.+?)(?:[\s\-/]|$)",
     re.IGNORECASE,
 )
+
 _UPI_HANDLE_RE = re.compile(r"([\w.\-]+)@[\w]+", re.IGNORECASE)
 
 
 def _extract_entity_name(description: str) -> str:
-    """Pull the human-readable entity name from a UPI / NEFT description."""
     m = _UPI_RE.search(description)
-    if m:
-        return m.group(1).strip()
-    m = _UPI_TO_RE.search(description)
-    if m:
-        return m.group(1).strip()
-    m = _NEFT_RE.search(description)
     if m:
         return m.group(1).strip()
     return description
 
 
-def _apply_merchant_map(text: str) -> tuple[str, str]:
-    """
-    Match text against MERCHANT_MAP patterns.
-    Returns (display_name, category) or (None, None) if no match.
-    """
+# ─────────────────────────────────────────────────────────────
+# MERCHANT MAP MATCHING
+# ─────────────────────────────────────────────────────────────
+
+def _apply_merchant_map(text: str):
     lower = text.lower()
     for pattern, (name, cat) in MERCHANT_MAP.items():
         if re.search(pattern, lower):
@@ -59,64 +67,73 @@ def _apply_merchant_map(text: str) -> tuple[str, str]:
     return None, None
 
 
-def _clean_person_name(raw: str) -> str:
-    """
-    Tidy up person names from UPI: 'NITIN A ZADPE' → 'Nitin A Zadpe'.
-    Strips honorifics and excess whitespace.
-    """
-    raw = re.sub(r"^(Mr|Mrs|Ms|Dr|Prof)\.?\s+", "", raw, flags=re.IGNORECASE)
-    # Remove trailing noise: numbers, ref codes
-    raw = re.sub(r"[\s_\-]+\d+$", "", raw).strip()
-    return raw.strip().title()[:40]
+# ─────────────────────────────────────────────────────────────
+# NEW: Fallback keyword-based categorization
+# ─────────────────────────────────────────────────────────────
+
+KEYWORDS = {
+    "Shopping": ["amazon", "amzn", "flipkart", "myntra"],
+    "Food": ["swiggy", "zomato", "restaurant", "cafe"],
+    "Travel": ["uber", "ola", "rapido", "petrol"],
+    "Entertainment": ["netflix", "spotify", "youtube"],
+}
 
 
-def categorize_transaction(description: str) -> tuple[str, str]:
-    """
-    Return (merchant_display_name, category) for a raw bank description.
+def fallback_category(desc: str):
+    for cat, words in KEYWORDS.items():
+        if any(word in desc for word in words):
+            return cat
+    return "Others"
 
-    Resolution order:
-    1. Full description → MERCHANT_MAP                   (catches bill payments, etc.)
-    2. Extracted entity → MERCHANT_MAP                   (catches UPI merchant names)
-    3. UPI handle       → MERCHANT_MAP                   (e.g. amzn@axisbank → Amazon)
-    4. Cleaned entity name, category = 'Others'          (personal transfers)
-    5. Fallback: truncated, title-cased description
-    """
+
+# ─────────────────────────────────────────────────────────────
+# MAIN FUNCTION
+# ─────────────────────────────────────────────────────────────
+
+def categorize_transaction(description: str):
     if not description or str(description).strip().lower() in ("", "nan", "-"):
         return "Unknown", "Others"
 
-    desc = str(description).strip()
+    raw_desc = str(description).strip()
 
-    # 1. Try full description
-    name, cat = _apply_merchant_map(desc)
+    # 1. Try full raw description
+    name, cat = _apply_merchant_map(raw_desc)
     if name:
         return name, cat
 
-    # 2. Extract entity and try
-    entity = _extract_entity_name(desc)
-    if entity and entity != desc:
-        name, cat = _apply_merchant_map(entity)
+    # 2. Extract entity
+    entity = _extract_entity_name(raw_desc)
+
+    # 3. Normalize (NEW STEP 🔥)
+    clean_desc = normalize_description(entity)
+
+    # 4. Try merchant map again
+    name, cat = _apply_merchant_map(clean_desc)
+    if name:
+        return name, cat
+
+    # 5. Try UPI handle
+    handle_match = _UPI_HANDLE_RE.search(raw_desc)
+    if handle_match:
+        handle = normalize_description(handle_match.group(1))
+        name, cat = _apply_merchant_map(handle)
         if name:
             return name, cat
 
-        # 3. Try from UPI handle (VPA)
-        handle_m = _UPI_HANDLE_RE.search(desc)
-        if handle_m:
-            name, cat = _apply_merchant_map(handle_m.group(1))
-            if name:
-                return name, cat
+    # 6. Fallback keyword categorization
+    fallback_cat = fallback_category(clean_desc)
 
-        # 4. Personal name transfer
-        return _clean_person_name(entity), "Others"
+    # 7. Final fallback name
+    cleaned_name = clean_desc.title()[:40] if clean_desc else "Unknown"
 
-    # 5. Generic fallback — clean up the description itself
-    # Remove ref numbers / numeric suffixes
-    cleaned = re.sub(r"\b\d{8,}\b", "", desc).strip()
-    cleaned = re.sub(r"\s{2,}", " ", cleaned)
-    return cleaned[:40].strip().title() or "Unknown", "Others"
+    return cleaned_name, fallback_cat
 
+
+# ─────────────────────────────────────────────────────────────
+# APPLY FUNCTIONS
+# ─────────────────────────────────────────────────────────────
 
 def apply_categorization(df: pd.DataFrame) -> pd.DataFrame:
-    """Add 'merchant' and 'category' columns to the DataFrame."""
     results = df["description"].apply(categorize_transaction)
     df = df.copy()
     df["merchant"] = results.apply(lambda x: x[0])
@@ -125,14 +142,9 @@ def apply_categorization(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def assign_transaction_type(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add 'transaction_type' column.
-
-    is_credit=True  → Income
-    is_credit=False → Expense
-
-    Note: Investments and EMI/Loans are still Expenses — money leaving the account.
-    """
     df = df.copy()
-    df["transaction_type"] = df["is_credit"].map({True: "Income", False: "Expense"})
+    df["transaction_type"] = df["is_credit"].map({
+        True: "Income",
+        False: "Expense"
+    })
     return df

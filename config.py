@@ -26,13 +26,13 @@ CONFIDENCE_MULTIPLIER = 1.96    # z-score for 95% CI
 DEFAULT_MONTHLY_BUDGET = 30_000.0
 
 DEFAULT_CATEGORY_BUDGETS = {
-    "Food":          5_000.0,
-    "Travel":        3_000.0,
-    "Shopping":      4_000.0,
-    "Entertainment": 2_000.0,
+    "Food":          10_000.0,
+    "Travel":        5_000.0,
+    "Shopping":      15_500.0,
+    "Entertainment": 3_500.0,
     "Bills":         5_000.0,
     "EMI / Loan":   10_000.0,
-    "Investments":   5_000.0,
+    "Investments":   25_000.0,
 }
 
 # ── Recurring-detection parameters ──────────────────────────────

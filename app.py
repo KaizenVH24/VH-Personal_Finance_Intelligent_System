@@ -37,104 +37,106 @@ st.set_page_config(
 # ── Dark-theme CSS ────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    html, body,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stApp"],
-    .main, .main > div { background: #0A0A0A !important; color: #E5E7EB; }
 
-    [data-testid="stSidebar"],
-    [data-testid="stSidebarContent"] {
-        background: #111111 !important;
-        border-right: 1px solid #1F1F1F;
-    }
-    [data-testid="stHeader"] { background: #0A0A0A !important; }
-    .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+/* ───────── GLOBAL ───────── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stApp"] {
+    background: #0A0A0A !important;
+    color: #E5E7EB;
+    font-family: 'Inter', sans-serif;
+}
 
-    p, span, div, label, li { color: #D1D5DB; }
-    h1, h2, h3, h4, h5, h6  { color: #F9FAFB !important; font-weight: 600; }
+/* ───────── SIDEBAR ───────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0F172A, #020617) !important;
+    border-right: 1px solid #1F2937;
+}
 
-    [data-testid="stMetric"] {
-        background: #141414 !important;
-        border: 1px solid #2A2A2A;
-        border-radius: 12px;
-        padding: 1rem 1.2rem;
-    }
-    [data-testid="stMetricLabel"] { font-size: 0.78rem; color: #6B7280 !important; font-weight: 500; }
-    [data-testid="stMetricValue"] { font-size: 1.5rem;  color: #F9FAFB !important; font-weight: 700; }
-    [data-testid="stMetricDelta"] { font-size: 0.8rem; }
+/* ───────── METRIC CARDS ───────── */
+[data-testid="stMetric"] {
+    background: linear-gradient(145deg, #111827, #020617);
+    border: 1px solid #1F2937;
+    border-radius: 14px;
+    padding: 1rem;
+    transition: 0.25s ease;
+}
 
-    hr { border: none; border-top: 1px solid #1F1F1F; margin: 1.5rem 0; }
+[data-testid="stMetric"]:hover {
+    transform: translateY(-4px);
+    border-color: #3B82F6;
+}
 
-    [data-testid="stTextInput"] input,
-    [data-testid="stNumberInput"] input,
-    [data-baseweb="select"] > div,
-    [data-baseweb="input"]  > div,
-    [data-baseweb="textarea"] textarea {
-        background: #1A1A1A !important;
-        border-color: #2A2A2A !important;
-        color: #E5E7EB !important;
-    }
-    [data-baseweb="select"] svg { fill: #9CA3AF; }
+/* Metric text */
+[data-testid="stMetricLabel"] {
+    color: #6B7280 !important;
+    font-size: 0.8rem;
+}
 
-    [data-baseweb="popover"] [role="listbox"],
-    [data-baseweb="menu"] { background: #1A1A1A !important; border: 1px solid #2A2A2A; }
-    [data-baseweb="option"] { background: #1A1A1A !important; color: #E5E7EB !important; }
-    [data-baseweb="option"]:hover { background: #252525 !important; }
+[data-testid="stMetricValue"] {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
 
-    [data-testid="stFileUploader"] {
-        background: #141414;
-        border: 1px dashed #2A2A2A;
-        border-radius: 8px;
-    }
-    [data-testid="stFileUploader"] label { color: #9CA3AF !important; }
+/* ───────── BUTTONS ───────── */
+button {
+    background: linear-gradient(90deg, #2563EB, #10B981) !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 8px !important;
+    transition: 0.2s ease;
+}
 
-    [data-testid="stTabs"] [role="tablist"]      { background: #111111; border-bottom: 1px solid #1F1F1F; }
-    [data-testid="stTabs"] [role="tab"]          { color: #6B7280 !important; }
-    [data-testid="stTabs"] [aria-selected="true"]{ color: #F9FAFB !important; border-bottom: 2px solid #3B82F6; }
+button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
 
-    [data-testid="stDataFrame"]          { border-radius: 8px; overflow: hidden; }
-    [data-testid="stDataFrame"] table    { background: #141414 !important; }
-    [data-testid="stDataFrame"] thead th { background: #1A1A1A !important; color: #9CA3AF !important; border-bottom: 1px solid #2A2A2A; }
-    [data-testid="stDataFrame"] tbody td { background: #141414 !important; color: #D1D5DB !important; border-bottom: 1px solid #1A1A1A; }
-    [data-testid="stDataFrame"] tbody tr:hover td { background: #1F1F1F !important; }
+/* ───────── INSIGHT CARDS ───────── */
+.insight-card {
+    background: #111827;
+    border-left: 4px solid #3B82F6;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
+    transition: 0.2s ease;
+}
 
-    [data-testid="stAlert"]              { border-radius: 8px; }
-    div[data-baseweb="notification"]     { background: #1A1A1A !important; border-left-width: 3px; }
+.insight-card:hover {
+    transform: scale(1.02);
+    border-left-color: #10B981;
+}
 
-    [data-testid="stRadio"] label        { color: #D1D5DB !important; font-size: 0.9rem; }
-    [data-testid="stRadio"] [role="radio"] div { border-color: #3B82F6 !important; }
+/* ───────── TABLE ───────── */
+[data-testid="stDataFrame"] table {
+    border-radius: 10px;
+    overflow: hidden;
+}
 
-    [data-testid="stCaptionContainer"],
-    small, .caption { color: #6B7280 !important; }
+[data-testid="stDataFrame"] tbody tr:hover td {
+    background: #1F2937 !important;
+}
 
-    [data-testid="stProgressBar"] > div > div { background: #3B82F6; }
-    [data-testid="stProgressBar"] > div       { background: #1F1F1F; }
+/* ───────── TABS ───────── */
+[data-testid="stTabs"] [aria-selected="true"] {
+    border-bottom: 2px solid #3B82F6;
+    color: #F9FAFB !important;
+}
 
-    [data-testid="stDownloadButton"] button {
-        background: #1A1A1A !important;
-        border: 1px solid #2A2A2A !important;
-        color: #E5E7EB !important;
-        border-radius: 8px;
-    }
-    [data-testid="stDownloadButton"] button:hover {
-        background: #252525 !important;
-        border-color: #3B82F6 !important;
-    }
+/* ───────── SCROLLBAR ───────── */
+::-webkit-scrollbar {
+    width: 6px;
+}
 
-    .insight-card {
-        background: #141414;
-        border-left: 3px solid #3B82F6;
-        border-radius: 0 8px 8px 0;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        color: #D1D5DB;
-    }
+::-webkit-scrollbar-thumb {
+    background: #1F2937;
+    border-radius: 4px;
+}
 
-    ::-webkit-scrollbar       { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0A0A0A; }
-    ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3A3A3A; }
+::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+}
+
 </style>
 """, unsafe_allow_html=True)
 

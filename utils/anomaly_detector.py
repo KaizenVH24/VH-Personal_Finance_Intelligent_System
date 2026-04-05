@@ -1,7 +1,7 @@
 """
 utils/anomaly_detector.py
 =========================
-Statistical + ML-based detection of unusual expense transactions.
+Improved anomaly detection using better feature engineering.
 """
 
 import numpy as np
@@ -10,11 +10,13 @@ from sklearn.ensemble import IsolationForest
 from config import BIG_TRANSACTION_MULTIPLIER, ANOMALY_CONTAMINATION
 
 
-def detect_large_transactions(df: pd.DataFrame) -> tuple[pd.DataFrame, float]:
-    """
-    Flag expenses that exceed mean + k×std as statistically large.
+# ─────────────────────────────────────────────────────────────
+# LARGE TRANSACTION DETECTION (same but cleaner)
+# ─────────────────────────────────────────────────────────────
 
-    Returns (df_with_is_large_col, threshold_value).
+def detect_large_transactions(df: pd.DataFrame):
+    """
+    Flag transactions larger than mean + k * std
     """
     df = df.copy()
     expenses = df[df["transaction_type"] == "Expense"]["amount"]
@@ -23,38 +25,66 @@ def detect_large_transactions(df: pd.DataFrame) -> tuple[pd.DataFrame, float]:
         df["is_large"] = False
         return df, 0.0
 
-    threshold = expenses.mean() + BIG_TRANSACTION_MULTIPLIER * expenses.std()
+    mean = expenses.mean()
+    std = expenses.std()
+
+    threshold = mean + BIG_TRANSACTION_MULTIPLIER * std
+
     df["is_large"] = (
         (df["transaction_type"] == "Expense") &
         (df["amount"] > threshold)
     )
+
     return df, float(threshold)
 
 
-def detect_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+# ─────────────────────────────────────────────────────────────
+# ANOMALY DETECTION (UPGRADED 🔥)
+# ─────────────────────────────────────────────────────────────
+
+def detect_anomalies(df: pd.DataFrame):
     """
-    Use Isolation Forest to detect behavioural anomalies in expense patterns.
-    Requires at least 10 expense rows to be meaningful.
+    Improved anomaly detection using:
+    - amount
+    - log(amount)
+    - day of month
     """
+
     df = df.copy()
     expense_df = df[df["transaction_type"] == "Expense"]
 
+    # Not enough data → skip
     if len(expense_df) < 10:
         df["is_anomaly"] = False
         return df
 
-    # Feature: amount + day-of-month (if available)
-    features = expense_df[["amount"]].copy()
+    features = pd.DataFrame(index=expense_df.index)
+
+    # Feature 1: amount
+    features["amount"] = expense_df["amount"]
+
+    # Feature 2: log amount (VERY IMPORTANT)
+    features["log_amount"] = np.log1p(features["amount"])
+
+    # Feature 3: day of month (behavior pattern)
     if "day" in expense_df.columns:
         features["day"] = expense_df["day"].astype(float)
+    else:
+        features["day"] = 0
 
+    # Optional normalization (makes model stable)
+    features = (features - features.mean()) / (features.std() + 1e-6)
+
+    # Model
     model = IsolationForest(
-        n_estimators=100,
+        n_estimators=150,                 # slightly higher → better detection
         contamination=ANOMALY_CONTAMINATION,
         random_state=42,
     )
+
     preds = model.fit_predict(features)
 
     df["is_anomaly"] = False
     df.loc[expense_df.index, "is_anomaly"] = (preds == -1)
+
     return df
