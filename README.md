@@ -8,7 +8,6 @@
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
 > Personal Finance Intelligent System — AI & ML-Powered Financial Intelligence Dashboard  
-> Engineered with discipline and analytical precision — **VH24 aka Vinay Hulsurkar**
 
 ---
 
@@ -450,11 +449,18 @@ Demonstrates:
 
 ## Author
 
-**Vinay Hulsurkar (VH24)**  
-Computer Engineering  
-Focused on Data Science and Intelligent Systems
+>  **Vinay Hulsurkar**  | **Gayatri Ghorpade**  | **Tejas Chavan**  | **Jitendra Chaudhary**  
 
-Built with discipline and long-term vision.
+
+
+
+
+
+
+
+---
+
+### My Profiles: 
 
 - LeetCode — https://leetcode.com/u/vinayhulsurkar24/
 - LinkedIn — https://www.linkedin.com/in/vinayhulsurkar
